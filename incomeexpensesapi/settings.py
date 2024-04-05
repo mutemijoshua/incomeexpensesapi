@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'income',
     'drf_yasg',
     'user_stats',
-    'corsheaders'
+    'corsheaders',
+    'social_authentication'
 ]
 #change how a user logs in  in /swagger
 SWAGGER_SETTINGS={
