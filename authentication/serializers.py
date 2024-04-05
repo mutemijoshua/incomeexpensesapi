@@ -8,7 +8,10 @@ from django.utils.encoding import smart_str,force_str,force_bytes,DjangoUnicodeD
 from django.utils.http import urlsafe_base64_decode , urlsafe_base64_encode
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
+from rest_framework_simplejwt.tokens import RefreshToken,TokenError
 from .utils import Util
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(max_length=68,min_length=6,write_only=True)
 
@@ -72,6 +75,8 @@ class ResetPasswordEmailRequestSerializer(serializers.Serializer):
 
     email = serializers.EmailField(min_length=2)
 
+    redirect_url = serializers.CharField(max_length=500,required=False)
+
     class Meta:
         fields = ['email']
 class TokenCheckSerializer(serializers.Serializer):
@@ -106,3 +111,23 @@ class SetNewPasswordserializer(serializers.Serializer):
         except  Exception as e:
             raise AuthenticationFailed('The reset link is invalid')  
         return super().validate(attrs)
+
+
+class LogoutSerializer(serializers.Serializer):
+        refresh = serializers.CharField()
+
+        default_error_messages = {
+            'bad_token':"Token is expired or invalid"
+        }
+
+        
+        def validate(self,attrs):
+            self.token = attrs['refresh']
+            return attrs
+        
+        def save(self, **kwargs):
+            try:
+                RefreshToken(self.token).blacklist()
+            except TokenError :
+                self.fail('bad_token')
+        

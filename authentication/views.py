@@ -2,7 +2,7 @@ from django.shortcuts import render
 
 from rest_framework import generics,status,views
 from .serializers import (RegisterSerializer, EmailVerificationSErializer,LoginSerializer,ResetPasswordEmailRequestSerializer
-         ,TokenCheckSerializer, SetNewPasswordserializer)
+         ,TokenCheckSerializer, SetNewPasswordserializer,LogoutSerializer)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
 from .models import User
@@ -20,6 +20,7 @@ from django.utils.http import urlsafe_base64_decode , urlsafe_base64_encode
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from .utils import Util
+from rest_framework import permissions
 # Create your views here.
 
 class RegisterView(generics.GenericAPIView):
@@ -79,11 +80,11 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
                 user = User.objects.get(email=email)
                 uidb64 = urlsafe_base64_encode(smart_bytes(user.id))
                 token = PasswordResetTokenGenerator().make_token(user)
-                        
+                redirect_url=request.data.get('redirect_url'+"")
                 current_site = get_current_site(request=request).domain
                 relativeLink = reverse('password-reset-confirm',kwargs={'uidb64':uidb64,'token':token})
                 absurl = 'http://'+current_site+relativeLink
-                email_body= 'Hello '+user.username+' use link to reset your password \n' + absurl
+                email_body= 'Hello '+user.username+' use link to reset your password \n' + absurl+"?redirect_url="+redirect_url,
                 data = {'email_body': email_body,'to_email':user.email,'email_subject':'Reset your password'}
                 Util.send_email(data) 
     
@@ -92,7 +93,7 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
         return Response({'Success ': ' We have sent you a link to reset your password'},status=status.HTTP_200_OK)
 
 class PasswordTokenCheckAPI(generics.GenericAPIView):
-    #serializer_class = TokenCheckSerializer 
+    serializer_class = TokenCheckSerializer 
     def get(self,request,uidb64,token):
     
         try:
@@ -115,3 +116,13 @@ class SetNewPasswordAPIView(generics.GenericAPIView):
 
         serializer.is_valid(raise_exception = True)
         return Response({'success':True,'message': 'Password reset success'}, status=status.HTTP_200_OK)
+    
+class LogoutAPIView(generics.GenericAPIView):
+    serializer_class=LogoutSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self,request):
+        serializer = self.serializer_class(data = request.data)
+        serializer.is_valid(raise_exeption=True)
+
+        return Response(status.HTTP_204_NO_CONTENT)
